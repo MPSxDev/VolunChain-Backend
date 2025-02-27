@@ -3,6 +3,18 @@ import AppDataSource from "../config/ormconfig";
 import { Organization } from "../entities/Organization";
 import { ValidationError } from "../errors";
 
+interface PaginationOptions {
+  page?: number;
+  limit?: number;
+}
+
+interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  totalPages: number;
+}
+
 class OrganizationService {
   private organizationRepo: Repository<Organization>;
 
@@ -104,10 +116,24 @@ class OrganizationService {
     await this.organizationRepo.remove(organization);
   }
 
-  async getAllOrganizations(): Promise<Organization[]> {
-    return this.organizationRepo.find({
+  async getAllOrganizations(options: PaginationOptions = {}): Promise<PaginatedResponse<Organization>> {
+    const page = options.page || 1;
+    const limit = options.limit || 10;
+    const skip = (page - 1) * limit;
+
+    const [organizations, total] = await this.organizationRepo.findAndCount({
       relations: ["projects"],
+      skip,
+      take: limit,
+      order: { createdAt: 'DESC' },
     });
+
+    return {
+      data: organizations,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 }
 
