@@ -2,6 +2,18 @@ import AppDataSource from '../config/ormconfig';
 import { Project } from '../entities/Project';
 // import { Equal } from 'typeorm'; // Commented out until its usage is confirmed
 
+interface PaginationOptions {
+  page?: number;
+  limit?: number;
+}
+
+interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  totalPages: number;
+}
+
 class ProjectService {
   private projectRepo = AppDataSource.getRepository(Project);
 
@@ -31,10 +43,46 @@ class ProjectService {
     });
   }
 
-  async getProjectsByOrganizationId(organizationId: string): Promise<Project[]> {
-    return this.projectRepo.find({
-      // where: { organization: { id: organizationId } }, // Commented out because it depends on the Organization entity
+  async getProjectsByOrganizationId(
+    organizationId: string,
+    options: PaginationOptions = {}
+  ): Promise<PaginatedResponse<Project>> {
+    const page = options.page || 1;
+    const limit = options.limit || 10;
+    const skip = (page - 1) * limit;
+
+    const [projects, total] = await this.projectRepo.findAndCount({
+      where: {},  // Add organization filter when implemented
+      skip,
+      take: limit,
+      order: { createdAt: 'DESC' },
     });
+
+    return {
+      data: projects,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
+
+  async getAllProjects(options: PaginationOptions = {}): Promise<PaginatedResponse<Project>> {
+    const page = options.page || 1;
+    const limit = options.limit || 10;
+    const skip = (page - 1) * limit;
+
+    const [projects, total] = await this.projectRepo.findAndCount({
+      skip,
+      take: limit,
+      order: { createdAt: 'DESC' },
+    });
+
+    return {
+      data: projects,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 }
 
