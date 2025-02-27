@@ -1,6 +1,18 @@
 import { AppDataSource } from '../config/ormconfig';
 import { User } from '../entities/User';
 
+interface PaginationOptions {
+  page?: number;
+  limit?: number;
+}
+
+interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  totalPages: number;
+}
+
 class UserService {
   private userRepo = AppDataSource.getRepository(User);
 
@@ -18,6 +30,25 @@ class UserService {
 
   async getUserByEmail(email: string): Promise<User | null> {
     return this.userRepo.findOne({ where: { email } });
+  }
+
+  async getAllUsers(options: PaginationOptions = {}): Promise<PaginatedResponse<User>> {
+    const page = options.page || 1;
+    const limit = options.limit || 10;
+    const skip = (page - 1) * limit;
+
+    const [users, total] = await this.userRepo.findAndCount({
+      skip,
+      take: limit,
+      order: { createdAt: 'DESC' },
+    });
+
+    return {
+      data: users,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 }
 
