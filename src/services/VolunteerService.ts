@@ -1,6 +1,19 @@
 import { Volunteer } from "../entities/Volunteer";
 import AppDataSource from "../config/ormconfig";
 import { DataSource, Repository } from "typeorm";
+
+interface PaginationOptions {
+  page?: number;
+  limit?: number;
+}
+
+interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  totalPages: number;
+}
+
 export default class VolunteerService {
   private volunteerRepo: Repository<Volunteer>;
 
@@ -32,9 +45,47 @@ export default class VolunteerService {
     });
   }
 
-  async getVolunteersByProjectId(projectId: string): Promise<Volunteer[]> {
-    return this.volunteerRepo.find({
+  async getVolunteersByProjectId(
+    projectId: string,
+    options: PaginationOptions = {}
+  ): Promise<PaginatedResponse<Volunteer>> {
+    const page = options.page || 1;
+    const limit = options.limit || 10;
+    const skip = (page - 1) * limit;
+
+    const [volunteers, total] = await this.volunteerRepo.findAndCount({
       where: { project: { id: projectId } },
+      relations: ["project"],
+      skip,
+      take: limit,
+      order: { createdAt: 'DESC' },
     });
+
+    return {
+      data: volunteers,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
+
+  async getAllVolunteers(options: PaginationOptions = {}): Promise<PaginatedResponse<Volunteer>> {
+    const page = options.page || 1;
+    const limit = options.limit || 10;
+    const skip = (page - 1) * limit;
+
+    const [volunteers, total] = await this.volunteerRepo.findAndCount({
+      relations: ["project"],
+      skip,
+      take: limit,
+      order: { createdAt: 'DESC' },
+    });
+
+    return {
+      data: volunteers,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 }
