@@ -1,6 +1,12 @@
 import { Volunteer } from "../entities/Volunteer";
 import AppDataSource from "../config/ormconfig";
 import { DataSource, Repository } from "typeorm";
+
+interface PaginationParams {
+  take?: number;
+  skip?: number;
+}
+
 export default class VolunteerService {
   private volunteerRepo: Repository<Volunteer>;
 
@@ -32,9 +38,31 @@ export default class VolunteerService {
     });
   }
 
-  async getVolunteersByProjectId(projectId: string): Promise<Volunteer[]> {
-    return this.volunteerRepo.find({
+  async getVolunteersByProjectId(
+    projectId: string,
+    pagination?: PaginationParams
+  ): Promise<{ volunteers: Volunteer[]; total: number }> {
+    const [volunteers, total] = await this.volunteerRepo.findAndCount({
       where: { project: { id: projectId } },
+      take: pagination?.take,
+      skip: pagination?.skip,
+      order: { createdAt: 'DESC' },
+      relations: ["project"]
     });
+
+    return { volunteers, total };
+  }
+
+  async getAllVolunteers(
+    pagination?: PaginationParams
+  ): Promise<{ volunteers: Volunteer[]; total: number }> {
+    const [volunteers, total] = await this.volunteerRepo.findAndCount({
+      take: pagination?.take,
+      skip: pagination?.skip,
+      order: { createdAt: 'DESC' },
+      relations: ["project"]
+    });
+
+    return { volunteers, total };
   }
 }
