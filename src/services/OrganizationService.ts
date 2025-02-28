@@ -3,6 +3,11 @@ import AppDataSource from "../config/ormconfig";
 import { Organization } from "../entities/Organization";
 import { ValidationError } from "../errors";
 
+interface PaginationParams {
+  take?: number;
+  skip?: number;
+}
+
 class OrganizationService {
   private organizationRepo: Repository<Organization>;
 
@@ -104,10 +109,17 @@ class OrganizationService {
     await this.organizationRepo.remove(organization);
   }
 
-  async getAllOrganizations(): Promise<Organization[]> {
-    return this.organizationRepo.find({
+  async getAllOrganizations(
+    pagination?: PaginationParams
+  ): Promise<{ organizations: Organization[]; total: number }> {
+    const [organizations, total] = await this.organizationRepo.findAndCount({
       relations: ["projects"],
+      take: pagination?.take,
+      skip: pagination?.skip,
+      order: { createdAt: 'DESC' }
     });
+
+    return { organizations, total };
   }
 }
 
