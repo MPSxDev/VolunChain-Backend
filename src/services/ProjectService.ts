@@ -2,6 +2,11 @@ import AppDataSource from '../config/ormconfig';
 import { Project } from '../entities/Project';
 // import { Equal } from 'typeorm'; // Commented out until its usage is confirmed
 
+interface PaginationParams {
+  take?: number;
+  skip?: number;
+}
+
 class ProjectService {
   private projectRepo = AppDataSource.getRepository(Project);
 
@@ -31,10 +36,30 @@ class ProjectService {
     });
   }
 
-  async getProjectsByOrganizationId(organizationId: string): Promise<Project[]> {
-    return this.projectRepo.find({
-      // where: { organization: { id: organizationId } }, // Commented out because it depends on the Organization entity
+  async getProjectsByOrganizationId(
+    organizationId: string, 
+    pagination?: PaginationParams
+  ): Promise<{ projects: Project[]; total: number }> {
+    const [projects, total] = await this.projectRepo.findAndCount({
+      where: { organization: { id: organizationId } },
+      take: pagination?.take,
+      skip: pagination?.skip,
+      order: { createdAt: 'DESC' }
     });
+
+    return { projects, total };
+  }
+
+  async getAllProjects(
+    pagination?: PaginationParams
+  ): Promise<{ projects: Project[]; total: number }> {
+    const [projects, total] = await this.projectRepo.findAndCount({
+      take: pagination?.take,
+      skip: pagination?.skip,
+      order: { createdAt: 'DESC' }
+    });
+
+    return { projects, total };
   }
 }
 
